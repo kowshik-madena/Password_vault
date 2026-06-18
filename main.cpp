@@ -2,10 +2,50 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <openssl/sha.h>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 
 const string VAULT_FILE = "vault.txt";
+const string HASH_FILE = "master.hash";
+
+string masterHash(const string& pass){
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(pass.c_str()), pass.length(), hash);
+    stringstream ss;
+    
+    for(int i=0; i<SHA256_DIGEST_LENGTH; i++){
+        ss << hex << setw(2) << setfill('0') << (int)hash[i];
+    }
+
+    return ss.str();
+}
+
+bool authenticate(){
+    ifstream infile(HASH_FILE);
+
+    if(!infile.is_open()){
+        cout << "---First time setup---\nCreate a Master Password: \n";
+        string master_pass;
+        getline(cin, master_pass);
+        ofstream outfile(HASH_FILE);
+        outfile << masterHash(master_pass);
+        outfile.close();
+        cout << "Vault initialized" << endl;
+        return true;
+    }
+
+    string master_hash;
+    infile >> master_hash;
+    infile.close();
+    cout << "Enter Master Password: \n";
+    string pass;
+    getline(cin, pass);
+
+    return masterHash(pass)==master_hash;
+}
 
 map<string, string> loadVault(){
     map<string, string> vault;
@@ -47,6 +87,12 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
+    if(!authenticate()){
+        cout << "Incorrect Master Password. Access Denied." << endl;
+        return 1;
+    }
+
+    cout << "Access Granted." << endl;
     string command = argv[1];
     map<string, string> vault = loadVault();
 
