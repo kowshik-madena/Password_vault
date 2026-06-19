@@ -14,6 +14,20 @@ using namespace std;
 const string VAULT_FILE = "vault.bin";
 const string HASH_FILE = "master.hash";
 
+void secureZero(string& s){
+    if(!s.empty()){
+        OPENSSL_cleanse(s.data(), s.length());
+        s.clear();
+    }
+}
+
+void secureZero(vector<unsigned char>& v){
+    if(!v.empty()){
+        OPENSSL_cleanse(v.data(), v.size());
+        v.clear();
+    }
+}
+
 vector<unsigned char> encryptAES(const string& plaintext, const vector<unsigned char>& key){
     // Generate a random 16-byte IV.
     unsigned char iv[16];
@@ -105,17 +119,23 @@ map<string, string> loadVault(const vector<unsigned char>& key){
                 vault[line.substr(0, pos)] = line.substr(pos+1);
             }
         }
+        secureZero(plaintext);
     }
     return vault;
 }
 
 void saveVault(const map<string, string>& vault, const vector<unsigned char>& key){
-    stringstream ss;
+    // Replaced stringstream with string to ensure the destruction of decrypted data
+    string plaintext;
     for(auto const& it : vault){
-        ss << it.first << "=" << it.second << "\n";
+        plaintext.append(it.first);
+        plaintext.append("=");
+        plaintext.append(it.second);
+        plaintext.append("\n");
     }
 
-    vector<unsigned char> ciphertext = encryptAES(ss.str(), key);
+    vector<unsigned char> ciphertext = encryptAES(plaintext, key);
+    secureZero(plaintext);
     ofstream outfile(VAULT_FILE, ios::binary);
 
     if(!outfile.is_open()){
@@ -135,6 +155,7 @@ vector<unsigned char> authenticate(){
         string master_pass;
         getline(cin, master_pass);
         vector<unsigned char> key = computeSHA256(master_pass);
+        secureZero(master_pass);
 
         ofstream outfile(HASH_FILE);
         for(unsigned char byte : key){
@@ -153,6 +174,7 @@ vector<unsigned char> authenticate(){
     string master_pass;
     getline(cin, master_pass);
     vector<unsigned char> key = computeSHA256(master_pass);
+    secureZero(master_pass);
 
     stringstream ss;
     for(unsigned char byte : key){
@@ -202,6 +224,6 @@ int main(int argc, char* argv[]){
             }
         }
     }
-
+    secureZero(key);
     return 0;
 }
