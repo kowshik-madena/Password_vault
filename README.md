@@ -31,19 +31,19 @@ On first run, the vault will prompt you to create a Master Password. This passwo
 
 **Manually save a password for a service**
 
-./vault add <'service'> <'password'>
+./vault add <`service`> <`password`>
 
 **Auto-generate a high-entropy password and securely inject it**
 
-./vault add <'service'> --generate [length]
+./vault add <`service`> --generate [length]
 
 **Retrieve a password**
 
-./vault get <'service'>
+./vault get <`service`>
 
 **Delete a saved password**
 
-./vault delete <'service'>
+./vault delete <`service`>
 
 **View all saved services**
 
