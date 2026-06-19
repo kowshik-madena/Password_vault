@@ -185,9 +185,37 @@ vector<unsigned char> authenticate(){
     else return vector<unsigned char>();
 }
 
+string generatePass(int length){
+    const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?";
+    int len = chars.length();
+    string password;
+    vector<unsigned char> rbytes(length);
+
+    if(RAND_bytes(rbytes.data(), length) != 1){
+        throw runtime_error("Critical Error : OS failed to gather secure entropy.");
+    }
+
+    for(int i=0; i<length; i++){
+        int index = rbytes[i] % len;
+        password += chars[index];
+    }
+
+    secureZero(rbytes);
+    return password;
+}
+
 int main(int argc, char* argv[]){
     if(argc<2){
-        cout << "Usage: ./vault [add/get/list] [service] [password]" << endl;
+        cout << "\n===========================================================================\n";
+        cout << "                           SECURE PASSWORD VAULT                           \n";
+        cout << "===========================================================================\n";
+        cout << "COMMANDS:\n";
+        cout << "  ./vault add <service> <password>       : Manually save a password\n";
+        cout << "  ./vault add <service> --generate [len] : Auto-generate & securely save\n";
+        cout << "  ./vault get <service>                  : Retrieve a password\n";
+        cout << "  ./vault delete <service>               : Delete a saved password\n";
+        cout << "  ./vault list                           : View all saved services\n";
+        cout << "===========================================================================\n\n";
         return 1;
     }
 
@@ -201,12 +229,31 @@ int main(int argc, char* argv[]){
     string command = argv[1];
     map<string, string> vault = loadVault(key);
 
-    if(command == "add" && argc==4){
-        string service = argv[2];
-        string password = argv[3];
-        vault[service] = password;
-        saveVault(vault, key);
-        cout << "Saved password for " << service << endl;
+    if(command == "add"){
+        if(argc==4 || argc==5){
+            string service = argv[2];
+            string password, arg3 = argv[3];
+
+            if(arg3 == "--generate"){
+                int len = 16;
+                if(argc==5) len = stoi(argv[4]);
+                password = generatePass(len);
+                vault[service] = password;
+                saveVault(vault, key);
+                cout << "Securely generated a " << len << "-character password for " << service << endl;
+            }
+            else{
+                password = argv[3];
+                vault[service] = password;
+                saveVault(vault, key);
+                cout << "Saved manual password for " << service << endl;
+            }
+            secureZero(password);
+        }
+        else{
+            cout << "Usage : ./vault add [service] [password]" << endl;
+            cout << "        ./vault add [service] --generate [length]" << endl;
+        }
     }
     else{
         if(command == "get" && argc==3){
@@ -215,12 +262,23 @@ int main(int argc, char* argv[]){
             else cout << "Service \"" << service << "\" not found in vault" << endl;
         }
         else{
-            if(command == "list" && argc==2){
-                cout << "Saved services :\n";
-                for(auto const& it : vault) cout << "- " << it.first << "\n";
+            if(command=="delete" && argc==3){
+                string service = argv[2];
+                if(vault.find(service) != vault.end()){
+                    vault.erase(service);
+                    saveVault(vault, key);
+                    cout << "Successfully deleted the password for " << service << endl;
+                }
+                else cout << "Service \"" << service << "\" not found in vault" << endl;
             }
             else{
-                cout << "Invalid command or arguments" << endl;
+                if(command == "list" && argc==2){
+                    cout << "Saved services :\n";
+                    for(auto const& it : vault) cout << "- " << it.first << "\n";
+                }
+                else{
+                    cout << "Invalid command or arguments" << endl;
+                }
             }
         }
     }
