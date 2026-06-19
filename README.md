@@ -27,21 +27,21 @@ g++ main.cpp -o vault -lcrypto
 
 On first run, the vault will prompt you to create a Master Password. This password is hashed via **SHA-256** and serves as the absolute lock for your database. If lost, the database cannot be recovered.
 
-**Available Commands:**
+## Available Commands:
 
-# Manually save a password for a service
-./vault add <service> <password>
+**Manually save a password for a service**
+./vault add '<service>' '<password>'
 
-# Auto-generate a high-entropy password and securely inject it
+**Auto-generate a high-entropy password and securely inject it**
 ./vault add <service> --generate [length]
 
-# Retrieve a password
+**Retrieve a password**
 ./vault get <service>
 
-# Delete a saved password
+**Delete a saved password**
 ./vault delete <service>
 
-# View all saved services
+**View all saved services**
 ./vault list
 
 ## Security Disclaimer & Architecture Notes
